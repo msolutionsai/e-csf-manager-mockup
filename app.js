@@ -11,6 +11,31 @@
   } = window.CSF;
 
   const LOGO_DARK = "https://msolutionsai.github.io/e-csf-manager/img/logo-dark.png";
+  const LOGO_LIGHT = "https://msolutionsai.github.io/e-csf-manager/img/logo-light.png";
+
+  // ---------------- THEME ----------------
+  const ThemeManager = {
+    get: () => document.documentElement.getAttribute("data-theme") || "dark",
+    init() {
+      const saved = localStorage.getItem("ecsf-theme");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const theme = saved || (prefersDark ? "dark" : "light");
+      this.set(theme, false);
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+        if (!localStorage.getItem("ecsf-theme")) this.set(e.matches ? "dark" : "light", false);
+      });
+    },
+    set(theme, save) {
+      document.documentElement.setAttribute("data-theme", theme);
+      if (save) localStorage.setItem("ecsf-theme", theme);
+    },
+    toggle() {
+      const next = this.get() === "dark" ? "light" : "dark";
+      this.set(next, true);
+      render(); // re-render so logo swap + active SVG update stay consistent
+      toast("Thème", next === "dark" ? "Mode sombre activé" : "Mode clair activé");
+    }
+  };
 
   // ---------------- STATE ----------------
   const state = {
@@ -117,8 +142,12 @@
   function renderLogin() {
     return `
       <div class="login-shell">
+        <button class="icon-btn theme-toggle" data-action="toggle-theme" title="Changer de thème" aria-label="Changer de thème" style="position:absolute;top:20px;right:20px;z-index:5">
+          <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+          <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
         <div class="login-card">
-          <div class="login-logo"><img src="${LOGO_DARK}" alt="e-CSF Manager" /></div>
+          <div class="login-logo"><img src="${getLogoUrl()}" alt="e-CSF Manager" /></div>
           <h1>Connexion</h1>
           <div class="subtitle">Cockpit de conformité CSF — Exercice ${COMPANY.exercice}</div>
           <div class="field">
@@ -193,7 +222,7 @@
     return `
       <aside class="sidebar">
         <div class="sidebar-header">
-          <img src="${LOGO_DARK}" alt="e-CSF Manager" />
+          <img src="${getLogoUrl()}" alt="e-CSF Manager" />
         </div>
         <div class="sidebar-profile">
           <div class="role">${roleLabel}</div>
@@ -226,6 +255,7 @@
             <button class="${p==='n1'?'active':''}" data-switch="n1" data-p="n1">N+1</button>
             <button class="${p==='giac'?'active':''}" data-switch="giac" data-p="giac">GIAC</button>
           </div>
+          ${renderThemeToggle()}
           <button class="icon-btn" data-action="toggle-notif" title="Notifications">
             ${ICONS.bell}${unread ? `<span class="dot"></span>` : ""}
           </button>
@@ -234,6 +264,22 @@
       </div>
     `;
   }
+
+  function renderThemeToggle() {
+    return `
+      <button class="icon-btn theme-toggle" data-action="toggle-theme" title="Changer de thème" aria-label="Changer de thème">
+        <svg class="theme-icon theme-icon--sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+        </svg>
+        <svg class="theme-icon theme-icon--moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    `;
+  }
+
+  function getLogoUrl() { return ThemeManager.get() === "light" ? LOGO_LIGHT : LOGO_DARK; }
 
   function getCrumbs() {
     const r = state.route;
@@ -1587,6 +1633,7 @@
         break;
       }
       case "logout": state.profile = null; navigate("#/login"); break;
+      case "toggle-theme": ThemeManager.toggle(); break;
       case "toggle-notif": state.notifOpen = !state.notifOpen; render(); break;
       case "close-notif": state.notifOpen = false; render(); break;
       case "toggle-read": {
@@ -1828,5 +1875,6 @@
   }
 
   // ---------------- BOOT ----------------
+  ThemeManager.init();
   render();
 })();
